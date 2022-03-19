@@ -1,46 +1,42 @@
-# Advanced Sample Hardhat Project
+# NFT Marketplace
+Смарт-контракт маркетплейса, который включает в себя функции создания NFT, а также функционал продажи и аукциона.
+##### Функционал:
+- Функция createItem() - создание нового предмета, обращается к контракту NFT и вызывает функцию mint.
+- Функция mint(), доступ к которой должен иметь только контракт маркетплейса
+- Функция listItem() - выставка на продажу предмета.
+- Функция buyItem() - покупка предмета.
+- Функция cancel() - отмена продажи выставленного предмета
+- Функция listItemOnAuction() - выставка предмета на продажу в аукционе.
+- Функция makeBid() - сделать ставку на предмет аукциона с определенным id.
+- Функция finishAuction() - завершить аукцион и отправить НФТ победителю
+- Функция cancelAuction() - отменить аукцион
 
-This project demonstrates an advanced Hardhat use case, integrating other tools commonly used alongside Hardhat in the ecosystem.
 
-The project comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts. It also comes with a variety of other tools, preconfigured to work with the project code.
-
-Try running some of the following tasks:
-
+##### npx hardhat test:
 ```shell
-npx hardhat accounts
-npx hardhat compile
-npx hardhat clean
-npx hardhat test
-npx hardhat node
-npx hardhat help
-REPORT_GAS=true npx hardhat test
-npx hardhat coverage
-npx hardhat run scripts/deploy.ts
-TS_NODE_FILES=true npx ts-node scripts/deploy.ts
-npx eslint '**/*.{js,ts}'
-npx eslint '**/*.{js,ts}' --fix
-npx prettier '**/*.{json,sol,md}' --check
-npx prettier '**/*.{json,sol,md}' --write
-npx solhint 'contracts/**/*.sol'
-npx solhint 'contracts/**/*.sol' --fix
+Marketplace
+    ✔ Checking that contract NFT is deployed
+    ✔ Checking that contract Token ERC20 is deployed
+    ✔ Checking that contract Marketplace is deployed
+    ✔ Checking that marketplace has role a MARKET_ROLE
+    ✔ Checking function createItem()
+    ✔ Checking function listItem() (168ms)
+    ✔ Checking function buyItem() (232ms)
+    ✔ Checking function cancel() (123ms)
+    ✔ Checking function listItemOnAuction() (98ms)
+    ✔ Checking function makeBid() (398ms)
+    ✔ Checking function finishAuction() no bid (198ms)
+    ✔ Checking function finishAuction() 1 bid (232ms)
+    ✔ Checking function finishAuction() 3 bid (370ms)
+    ✔ Checking function cancelAuction() has bid (290ms)
+    ✔ Checking function cancelAuction() has not bid (137ms)
 ```
-
-# Etherscan verification
-
-To try out Etherscan verification, you first need to deploy a contract to an Ethereum network that's supported by Etherscan, such as Ropsten.
-
-In this project, copy the .env.example file to a file named .env, and then edit it to fill in the details. Enter your Etherscan API key, your Ropsten node URL (eg from Alchemy), and the private key of the account which will send the deployment transaction. With a valid .env file in place, first deploy your contract:
-
+##### npx hardhat coverage:
 ```shell
-hardhat run --network ropsten scripts/deploy.ts
+------------------|----------|----------|----------|----------|----------------|
+File              |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
+------------------|----------|----------|----------|----------|----------------|
+  Marketplace.sol |      100 |      100 |      100 |      100 |                |
+------------------|----------|----------|----------|----------|----------------|
+------------------|----------|----------|----------|----------|----------------|
 ```
-
-Then, copy the deployment address and paste it in to replace `DEPLOYED_CONTRACT_ADDRESS` in this command:
-
-```shell
-npx hardhat verify --network ropsten DEPLOYED_CONTRACT_ADDRESS "Hello, Hardhat!"
-```
-
-# Performance optimizations
-
-For faster runs of your tests and scripts, consider skipping ts-node's type checking by setting the environment variable `TS_NODE_TRANSPILE_ONLY` to `1` in hardhat's environment. For more details see [the documentation](https://hardhat.org/guides/typescript.html#performance-optimizations).
