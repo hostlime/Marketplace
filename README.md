@@ -1,5 +1,8 @@
 # NFT Marketplace
 Смарт-контракт маркетплейса, который включает в себя функции создания NFT, а также функционал продажи и аукциона.
+ + NFT ERC721 deployed to: https://rinkeby.etherscan.io/address/0x23E454eFaf197a3970FB895Acb28d822a2c3Ec92
+ + ERC20 token deployed to: https://rinkeby.etherscan.io/address/0x3FF29861C2C14a811bd9eBc5596F2b3282b06f31
+ + Marketplace deployed to: https://rinkeby.etherscan.io/address/0x1868F94Cce81115a9c30f7BBd64CA41024EdEA3E
 ##### Функционал:
 - Функция createItem() - создание нового предмета, обращается к контракту NFT и вызывает функцию mint.
 - Функция mint(), доступ к которой должен иметь только контракт маркетплейса
