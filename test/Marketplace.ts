@@ -3,6 +3,7 @@ import { ethers } from "hardhat";
 
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Console } from "console";
+import { utils } from "mocha";
 
 
 describe("Marketplace", function () {
@@ -72,14 +73,14 @@ describe("Marketplace", function () {
         expect(result).to.be.equal(true);
     });
 
-    it.only('Checking function createItem()', async () => {
+    it('Checking function createItem()', async () => {
         expect(await nft.balanceOf(seller.address)).to.be.equal(1)
         // Убеждаемся что урл есть под id = 0
         expect(await nft.tokenURI(0)).to.have.string(uriNFT)
         // Убеждаемся что nft принадлежит овнеру
         expect(await nft.ownerOf(0)).to.be.equal(seller.address)
     });
-    it.only('Checking function listItem()', async () => {
+    it('Checking function listItem()', async () => {
         // Убеждаемся что только владелец может выставить на аукцион 
         await expect(marketplace.connect(buyer).listItem(0, costNft)).to.be.revertedWith(
             "Only owner NFT can call this function widt that _tokenID"
@@ -92,19 +93,60 @@ describe("Marketplace", function () {
         expect((await marketplace.sListItem(0)).vendor).to.be.equal(seller.address)
         expect((await marketplace.sListItem(0)).price).to.be.equal(costNft)
     });
-    it.only('Checking function buyItem()', async () => {
+    it('Checking function buyItem()', async () => {
         // Убеждаемся что нельзя купить несуществующий лот
         await expect(marketplace.connect(buyer).buyItem(0)).to.be.revertedWith(
             "NFT does not exist"
         );
         // выставляем NFT на продажу
-        await marketplace.connect(seller).listItem(0, costNft);
+        const Event = await marketplace.connect(seller).listItem(0, costNft);
         // Убеждаемся что владелец не может покупать
         await expect(marketplace.connect(seller).buyItem(0)).to.be.revertedWith(
             "Owner cant buy his nft"
         );
-
-
+        // Проверка эвента
+        expect(Event).to.emit(marketplace, "BuyItem")
+            .withArgs(seller.address, buyer.address, 0, costNft)
     });
+    it('Checking function cancel()', async () => {
+        // выставляем NFT на продажу
+        await marketplace.connect(seller).listItem(0, costNft);
+        // Убеждаемся что "НЕ овнер" не сможет отменить продажу NFT
+        await expect(marketplace.connect(buyer).cancel(0)).to.be.revertedWith(
+            "Only owner can cancel sell"
+        );
+        const event = await marketplace.connect(seller).cancel(0);
+        // Проверка эвента
+        expect(event).to.emit(marketplace, "Cancel")
+            .withArgs(seller.address, 0)
 
+        // Проверка что НЕТ выставленного лота в мапинге
+        expect((await marketplace.sListItem(0)).vendor).to.be.equal(ethers.constants.AddressZero)
+        expect((await marketplace.sListItem(0)).price).to.be.equal(0)
+    });
+    it('Checking function listItemOnAuction()', async () => {
+        // выставляем NFT на продажу
+        const event = await marketplace.connect(seller).listItemOnAuction(0, costNft);
+
+        // Проверка выставленного лота в мапинге
+        expect((await marketplace.sListAuction(0)).vendor).to.be.equal(seller.address)
+        expect((await marketplace.sListAuction(0)).bidPrice).to.be.equal(costNft)
+        expect((await marketplace.sListAuction(0)).lastBuyer).to.be.equal(ethers.constants.AddressZero)
+        expect((await marketplace.sListAuction(0)).numBid).to.be.equal(0)
+    });
+    it.only('Checking function makeBid()', async () => {
+        // выставляем NFT на продажу
+        const event = await marketplace.connect(seller).listItemOnAuction(0, costNft);
+        // делаем ставку по той же цене(проверка require)
+        await expect(marketplace.connect(buyer).makeBid(0, costNft)).to.be.revertedWith(
+            "Your price must be more than the minimum bid"
+        );
+        // Делаем ставку по цене + 1
+        await marketplace.connect(buyer).makeBid(0, costNft + 1)
+        // Проверка что НЕТ выставленного лота в мапинге
+        expect((await marketplace.sListAuction(0)).vendor).to.be.equal(seller.address)
+        expect((await marketplace.sListAuction(0)).bidPrice).to.be.equal(costNft)
+        expect((await marketplace.sListAuction(0)).lastBuyer).to.be.equal(ethers.constants.AddressZero)
+        expect((await marketplace.sListAuction(0)).numBid).to.be.equal(0)
+    });
 });
