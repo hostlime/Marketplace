@@ -44,11 +44,11 @@ contract Marketplace {
     }
 
     // Аукцион еще не закончился ?
-    modifier auctionTimeNotEnded(uint256 _tokenID) {
+    modifier auctionTimeEnded(uint256 _tokenID) {
         require(
-            block.timestamp - sListAuction[_tokenID].auctionStartTime <=
-                durationAuction,
-            "Auction ended"
+            sListAuction[_tokenID].auctionStartTime + durationAuction <=
+                block.timestamp,
+            "Auction has not ended yet"
         );
         _;
     }
@@ -143,10 +143,12 @@ contract Marketplace {
     }
 
     // Функция makeBid() - сделать ставку на предмет аукциона с определенным id.
-    function makeBid(uint256 _tokenID, uint256 _price)
-        public
-        auctionTimeNotEnded(_tokenID)
-    {
+    function makeBid(uint256 _tokenID, uint256 _price) public {
+        require(
+            sListAuction[_tokenID].auctionStartTime + durationAuction >
+                block.timestamp,
+            "Auction ended"
+        );
         // стоимость превышает предыдущую ставку ?
         require(
             sListAuction[_tokenID].bidPrice < _price,
@@ -157,8 +159,7 @@ contract Marketplace {
 
         // если это НЕ ПЕРВАЯ ставка то возвращаем токены предыдущему бидеру
         if (sListAuction[_tokenID].lastBuyer != address(0x0)) {
-            _Token.transferFrom(
-                address(this),
+            _Token.transfer(
                 sListAuction[_tokenID].lastBuyer,
                 sListAuction[_tokenID].bidPrice
             );
@@ -171,55 +172,62 @@ contract Marketplace {
     }
 
     // Функция finishAuction() - завершить аукцион и отправить НФТ победителю
-    function finishAuction(uint256 _tokenID) public {
-        address currentOwner;
-        require(
-            sListAuction[_tokenID].auctionStartTime + durationAuction <=
-                block.timestamp,
-            "Auction has not ended yet"
-        );
+    function finishAuction(uint256 _tokenID) public auctionTimeEnded(_tokenID) {
         if (sListAuction[_tokenID].numBid >= countBidsForComplete) {
             // Две и более ставок
-            currentOwner = sListAuction[_tokenID].lastBuyer; // отправляем последнему бидеру
+            // NFT бидеру а токены продавцу
+            _NFT.transferFrom(
+                address(this),
+                sListAuction[_tokenID].lastBuyer,
+                _tokenID
+            );
+            _Token.transfer(
+                sListAuction[_tokenID].vendor,
+                sListAuction[_tokenID].bidPrice
+            );
+            emit FinishAuction(
+                sListAuction[_tokenID].vendor,
+                sListAuction[_tokenID].lastBuyer,
+                _tokenID,
+                sListAuction[_tokenID].bidPrice
+            );
         } else {
             // Меньше двух ставок
-            currentOwner = sListAuction[_tokenID].vendor; // отправляем владельцу
+            // NFT продавцу а если были ставки то токены возвращаем последнему бидеру
+            _NFT.transferFrom(
+                address(this),
+                sListAuction[_tokenID].vendor,
+                _tokenID
+            );
+            if (sListAuction[_tokenID].lastBuyer != address(0x0)) {
+                _Token.transfer(
+                    sListAuction[_tokenID].lastBuyer,
+                    sListAuction[_tokenID].bidPrice
+                );
+            }
         }
-
-        // отправляем nft и токены
-        _NFT.transferFrom(address(this), currentOwner, _tokenID);
-        _Token.transferFrom(
-            address(this),
-            currentOwner,
-            sListAuction[_tokenID].bidPrice
-        );
-
         // ЗАТИРАЕМ ДАННЫЕ
         delete sListAuction[_tokenID];
-        emit FinishAuction(
-            sListAuction[_tokenID].vendor,
-            currentOwner,
-            _tokenID,
-            sListAuction[_tokenID].bidPrice
-        );
     }
 
     // Функция cancelAuction() - отменить аукцион
-    function cancelAuction(uint256 _tokenID)
-        public
-        auctionTimeNotEnded(_tokenID)
-    {
+    function cancelAuction(uint256 _tokenID) public auctionTimeEnded(_tokenID) {
+        require(
+            msg.sender == sListAuction[_tokenID].vendor,
+            "Only owner can cancel auction"
+        );
         // отправляем nft и токены
         _NFT.transferFrom(
             address(this),
             sListAuction[_tokenID].vendor,
             _tokenID
         );
-        _Token.transferFrom(
-            address(this),
-            sListAuction[_tokenID].vendor,
-            sListAuction[_tokenID].bidPrice
-        );
+        if (sListAuction[_tokenID].lastBuyer != address(0x0)) {
+            _Token.transfer(
+                sListAuction[_tokenID].lastBuyer,
+                sListAuction[_tokenID].bidPrice
+            );
+        }
 
         // ЗАТИРАЕМ ДАННЫЕ
         delete sListAuction[_tokenID];
