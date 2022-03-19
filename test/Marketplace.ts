@@ -97,6 +97,11 @@ describe("Marketplace", function () {
         expect((await marketplace.sListItem(0)).price).to.be.equal(costNft)
     });
     it('Checking function buyItem()', async () => {
+        let balanceBuyer1, balanceBuyer2, balanceMarketplace, balanceSeller;
+
+        balanceBuyer1 = await token.balanceOf(buyer.address);
+        balanceSeller = await token.balanceOf(seller.address);
+
         // Убеждаемся что нельзя купить несуществующий лот
         await expect(marketplace.connect(buyer).buyItem(0)).to.be.revertedWith(
             "NFT does not exist"
@@ -107,9 +112,19 @@ describe("Marketplace", function () {
         await expect(marketplace.connect(seller).buyItem(0)).to.be.revertedWith(
             "Owner cant buy his nft"
         );
-        // Проверка эвента
-        expect(Event).to.emit(marketplace, "BuyItem")
-            .withArgs(seller.address, buyer.address, 0, costNft)
+
+        // Покупаем
+        await marketplace.connect(buyer).buyItem(0);
+
+        // Проверяем балансы
+        expect(await token.balanceOf(buyer.address)).to.be.equal(balanceBuyer1.toNumber() - costNft)
+        expect(await token.balanceOf(marketplace.address)).to.be.equal(0)
+        expect(await token.balanceOf(seller.address)).to.be.equal(balanceSeller.toNumber() + costNft)
+        expect(await nft.ownerOf(0)).to.be.equal(buyer.address)    // NFT
+
+        // Проверяем удаление данных о продавце
+        expect((await marketplace.sListItem(0)).price).to.be.equal(0)
+        expect((await marketplace.sListItem(0)).vendor).to.be.equal(ethers.constants.AddressZero)
     });
     it('Checking function cancel()', async () => {
         // выставляем NFT на продажу
