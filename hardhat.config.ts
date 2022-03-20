@@ -9,6 +9,16 @@ import "solidity-coverage";
 
 dotenv.config();
 
+
+task("mint", "mint NFT (ERC720)")
+  .addParam("contract", "address of deployed Marketplace")
+  .addParam("uri", "URI to ipfs json")
+  .setAction(async (taskArgs, hre) => {
+    const marketplace = await hre.ethers.getContractAt("Marketplace", taskArgs.contract)
+    await marketplace.createItem(taskArgs.uri)
+  })
+
+
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
